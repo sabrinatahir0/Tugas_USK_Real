@@ -115,11 +115,10 @@ class PesertaController extends Controller
         $request->validate([
             'nama'     => 'required|string|max:255|regex:/^[a-zA-Z\s]+$/',
             'email'    => 'required|email|unique:peserta,email,'.$id,
-            'no_hp'    => 'required|numeric|max:20',
             'skema_id' => 'required|exists:skema,id',
         ], [
             'nama.regex' => 'Nama peserta hanya boleh berisi huruf dan spasi.',
-            'no_hp.max'  => 'Nomor HP maksimal 20 karakter.',
+            'email.unique' => 'Email ini sudah terdaftar.',
         ]);
 
         // Update data sekaligus pastikan user_id terikat jika sebelumnya kosong
