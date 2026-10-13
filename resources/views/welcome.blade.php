@@ -31,7 +31,7 @@
             </nav>
 
             <a href="{{ url('/') }}" class="text-xl font-bold text-slate-900 tracking-tight">
-                JWD App Sabrina
+                Sertifikasi APP
             </a>
         </header>
 
@@ -107,7 +107,7 @@
 
         <!-- Footer -->
         <footer class="w-full max-w-5xl mx-auto text-center text-xs text-slate-500">
-            &copy; {{ date('Y') }} Aplikasi Sertifikasi Sabrina. All rights reserved.
+           
         </footer>
 
     </body>

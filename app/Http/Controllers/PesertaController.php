@@ -9,19 +9,38 @@ use Illuminate\Http\Request;
 class PesertaController extends Controller
 {
     public function index(Request $request)
-    {
-        $user = auth()->user();
+{
+    $cari = $request->input('cari');
 
-        if ($user->role == 'admin') {
-            // Admin melihat semua peserta
-            $peserta = Peserta::with('skema')->latest()->get();
-        } else {
-            // User biasa HANYA melihat data miliknya berdasarkan pencocokan email
-            $peserta = Peserta::with('skema')->where('email', $user->email)->get();
-        }
-
-        return view('peserta.index', compact('peserta'));
+    // Jika yang login adalah admin, tampilkan semua peserta dengan opsi pencarian
+    if (auth()->user()->role == 'admin') {
+        $peserta = Peserta::with('skema')
+            ->when($cari, function ($query, $search) {
+                return $query->where('nama', 'like', "%{$search}%")
+                             ->orWhere('email', 'like', "%{$search}%")
+                             ->orWhereHas('skema', function ($q) use ($search) {
+                                 $q->where('nama_skema', 'like', "%{$search}%");
+                             });
+            })
+            ->get();
+    } else {
+        // Jika user biasa, hanya tampilkan data milik mereka sendiri
+        $peserta = Peserta::with('skema')
+            ->where(function ($query) {
+                $query->where('user_id', auth()->id())
+                      ->orWhere('email', auth()->user()->email);
+            })
+            ->when($cari, function ($query, $search) {
+                return $query->where(function ($q) use ($search) {
+                    $q->where('nama', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->get();
     }
+
+    return view('peserta.index', compact('peserta', 'cari'));
+}
 
     public function create()
     {
@@ -34,20 +53,19 @@ class PesertaController extends Controller
         $request->validate([
             'nama'     => 'required|string|max:255|regex:/^[a-zA-Z\s]+$/',
             'email'    => 'required|email|unique:peserta,email',
-            'no_hp'    => 'required|numeric|max:20',
+            'no_hp'    => 'required|numeric|digits_between:10,15', // <-- Menggunakan numeric dan batasan digit
             'skema_id' => 'required|exists:skema,id',
         ], [
             'nama.required'     => 'Nama peserta wajib diisi.',
             'nama.regex'        => 'Nama peserta hanya boleh berisi huruf dan spasi (tidak boleh mengandung angka atau simbol).',
             'email.required'    => 'Email wajib diisi.',
             'email.unique'      => 'Email ini sudah terdaftar.',
-            'no_hp.numeric'     => 'Nomor HP harus berupa angka.',
             'no_hp.required'    => 'Nomor HP wajib diisi.',
-            'no_hp.max'         => 'Nomor HP tidak boleh lebih dari 20 karakter.',
+            'no_hp.numeric'     => 'Nomor HP harus berupa angka.',
+            'no_hp.digits_between' => 'Nomor HP harus terdiri dari 10 sampai 15 digit.',
             'skema_id.required' => 'Pilih skema sertifikasi.',
         ]);
 
-        // Masukkan data request sekaligus ikat dengan user_id yang sedang login
         $data = $request->all();
         $data['user_id'] = auth()->id();
 
@@ -97,7 +115,7 @@ class PesertaController extends Controller
         $request->validate([
             'nama'     => 'required|string|max:255|regex:/^[a-zA-Z\s]+$/',
             'email'    => 'required|email|unique:peserta,email,'.$id,
-            'no_hp'    => 'required|string|max:20',
+            'no_hp'    => 'required|numeric|max:20',
             'skema_id' => 'required|exists:skema,id',
         ], [
             'nama.regex' => 'Nama peserta hanya boleh berisi huruf dan spasi.',
